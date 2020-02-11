@@ -1,4 +1,4 @@
-## Advanced Lane Finding
+# Advanced Lane Finding
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
 The goal of this project is, given a video of a road taken from a car moving forward, to identify the lane lines and plot them on the video.
@@ -30,7 +30,7 @@ The final result(plotted lanes on the project-video) can be found here: [data/ou
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
 
-### Camera Calibration
+## Camera Calibration
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
@@ -53,55 +53,73 @@ Here is the result of undistorting one chessboard image as test:
 I have saved the camera calibration results [here](data/camera_calibration.p) for later uses. 
 
 
-### Pipeline (single images)
+## Pipeline (single images)
 
-#### 1. Distortion Correction
+### 1. Distortion Correction
 
 Using the camera calibration matrix and distortion coefficients that I had saved in the previous step, I write a function called ```undistort_image``` that, given a distorted image, performs undistortion and returns a corrected image. Here is an example: 
 
 ![image_undistort](data/pipeline_examples/step1_undistorted.jpg)
 
-#### 2. Thresholding into a Binary Image: Color transforms, Gradients or other methods
+### 2. Thresholding into a Binary Image: Color transforms, Gradients or other methods
+
+To get the binary image that would aid in isolating the lane lines in the images of the road, I wrote several functions to implement different thresholding methods to get binary images:
+
+* **Absolute Sobel Thresholding**: I wrote the ```abs_sobel_thresh``` function that implements  the [Sobel operator](https://en.wikipedia.org/wiki/Sobel_operator) to detect absolute changes in gradients along the X and Y axes in order to detect lines.
+
+* **Magnitude Thresholding**: I implemented the ```mag_thresh``` function to implement a thresholding by taking the Euclidean magnitude of the gradients as measured by the Sobel method along X and Y axes.
+
+* **Direction Thresholding**: To get thresholding with respect to the direction of the gradients identified by the Sobel methods, I wrote the ```dir_thresh``` function which works by measuring the angle (arctan) between Sobel operators in X and Y directions.
+
+* **Color Space Thresholding**: To detect changes in the HLS color space of the images in order to detect lines, I impelemented the function ```hue_thresh``` and ```saturation thresh``` to detect changes in hue and saturation of images.
 
 
-
-<img src="data/pipeline_examples/step2_thresholding.jpg" width="800" height="500"/>
-
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
-
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+##### Combining all thresholds:
+Each of the thresholding techniques mentioned above detect some facets of the lines. To get a comprehensive binary image so that our downstream work of fitting mathematical equations to the lane lines becoms easier, I combined the individual methods in a function named ```combined_thresh```. Here is how they are combined:
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+def combined_thresh(img, abs_thresh = (20, 100), magnitude_thresh = (30, 100), \
+                         angle_thresh = (0.7, 1.4), h_thresh = (10, 35), s_thresh = (120, 255)):
+    
+    gradx = abs_sobel_thresh(img, orient = 'x', sobel_kernel = 3, thresh = abs_thresh)
+    grady = abs_sobel_thresh(img, orient = 'y', sobel_kernel = 3, thresh = abs_thresh)
+    mag_binary = mag_thresh(img, sobel_kernel = 3, thresh = magnitude_thresh)
+    dir_binary = dir_thresh(img, sobel_kernel = 3, thresh = angle_thresh)
+    h_binary = hue_thresh(img, thresh = h_thresh)
+    s_binary = saturation_thresh(img, thresh = s_thresh)
+    combined_binary = np.zeros_like(gradx)
+    combined_binary[(gradx == 1) & (grady ==1) & (mag_binary == 1) & (dir_binary == 1) | (h_binary == 1) & (s_binary == 1)] = 1
+    return combined_binary
 ```
 
-This resulted in the following source and destination points:
+Below is a glimpse of how the different thresholds look when applied to one of the images of the road.
 
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+<img src="data/pipeline_examples/step2_thresholding.jpg" width="800" height="1200"/>
 
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
+### 3. Perspective Transformation and Warping
 
-![alt text][image4]
+I implemented perspective transformation and warping by writing a function named ```perspective_transform``` which takes in an image and first performs perspective transformation by using the ```cv2.getPerspectiveTransform``` function when given one source and a destination. Then it warps the image using the ```cv2.warpPerspective``` function and returns a warped image and two matrices ```M``` and ```Minv```.
 
-#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+Here is an example of how it works.
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+<img src="data/pipeline_examples/step3_perspective_transform_warping.jpg" width="800" height="600"/>
 
-![alt text][image5]
+### 4. Lane Lines Detection and Polynomial Fitting
+I used two methods for lane lines detection and to fit polynomials.
+
+#### a) Sliding Windows Method:
+Given a binary image that has gone through perspective transform and warping, this method (implemented in functions ```find_lane_pixels``` and ```get_polynomial```) divides the image into several horizontal windows and then detects peaks in intensity on the left and right side of frame. To do this, intensity histograms are taken into account. When all the peaks have been detected, ```np.polyfit``` is used to fit a quadratic equation to each side of the image to represent the left and the right lanes. The result of this process looks like this when applied to a test image.
+
+<img src="data/pipeline_examples/step4a_sliding_windows.jpg" width="640" height="400"/>
+
+
+#### b) Search From Prior Method:
+I implemented the ```search_around_poly``` function which, gievn an image of a road and equations of lines from the left and the right lanes from the previous frame, tries to detect and fit lane lines in the current frame. It does so by reading the previous lane lines and then looking for lines within their margins. The working principle of this method is that when the camera takes images in a moving car, there is very high chance of finding the next lines around the neighborhood of the previous lines as lane lines do not change abruptly. 
+
+Here is an example:
+
+<img src="data/pipeline_examples/step4b_search_from_prior.jpg" width="640" height="400"/>
+
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
