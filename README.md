@@ -3,19 +3,19 @@
 
 The goal of this project is, given a video of a road taken from a car moving forward, to identify the lane lines and plot them on the video.
 
-Here is a glimpse of the final result -
+Here is a glimpse of the what we have accomplished in this project -
 
-![](data/output_videos/gif_solution_sample.gif)
+<p float="left">
+    <img src='data/test_videos/gif_challenge_sample.gif' width="360" height="200"/>
+    <img src ='data/output_videos/gif_solution_sample.gif' width="360" height="200"/>
+</p>
 
 &nbsp;
 
 The work is done in the following jupyter notebook: [advanced_lane_lines.ipynb](advanced_lane_lines.ipynb)
 
-Example images of each step of the pipeline can be found here: [data/examples/](data/examples/)
 
-The results of applying the image processing pipeline on the test images are here: [data/output_images/](data/output_images/)
 
-The final result(plotted lanes on the project-video) can be found here: [data/output_videos/challenge_video_solution](data/output_videos/challenge_video_solution)
 
 
 * Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
