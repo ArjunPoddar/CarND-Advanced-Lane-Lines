@@ -117,17 +117,66 @@ Given a binary image that has gone through perspective transform and warping, th
 I implemented the ```search_around_poly``` function which, gievn an image of a road and equations of lines from the left and the right lanes from the previous frame, tries to detect and fit lane lines in the current frame. It does so by reading the previous lane lines and then looking for lines within their margins. The working principle of this method is that when the camera takes images in a moving car, there is very high chance of finding the next lines around the neighborhood of the previous lines as lane lines do not change abruptly. 
 
 Here is an example:
-
 <img src="data/pipeline_examples/step4b_search_from_prior.jpg" width="640" height="400"/>
 
 
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+### 5. Measuring Curvature and Distance from the Center
+There were two methods taught in the course to calculate curvature of the lines and I implemented both in my notebook. They are named ```measure_curvature_and_center``` and ```curvature_in_meters``` respectively. I used the second one, ```curvature_in_meters```, to implement in the pipeline. Once the left and right radii of curvature have been determined, I use take average of their intercepts at the bottom of the image to detect the center of the car and then subtract from the middle of the width of the image to get the distance from the center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I also wrote a function ```print_data_on_image``` that prints the two radii and the distance of the center on the image.
 
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+### 6. Pipeline
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I wrote a python class for the lines in order to help me keep track of lanes from previous frames. It is called ```class Line()```. The entire pipeline is implemented in the function ```pipeline```
+
+Here is how my pipeline works - 
+* Initialize two lines 
+    ```python
+    left_line ,right_line = Line(), Line()
+    ```
+* Read the image and undistort it
+    ```python
+    undistorted = undistort_image(image, dist_pickle)
+    ```
+    
+* Get a binary image by applying different thresholding techniques on the undistorted image
+    ```python
+    thresholded = combined_thresh(undistorted)
+    ```
+* Apply perspective transform
+    ```python
+    binary_warped, Minv, M = perspective_transform(thresholded)
+    ```
+* If lanes are not detected in the previous frame, use sliding windows to detect lines in the current frame
+    ```python
+    if left_line.found == False or right_line.found == False:
+        lanes_detected, left_fit, right_fit = fit_polynomial(binary_warped)
+    ```
+* Else if lanes are detected in the previous frame, use them to detect lines in the current frame
+    ```python
+    else:
+        lanes_detected, left_fit, right_fit = search_around_poly(binary_warped, left_line.previous_fit, right_line.previous_fit)
+    ```
+        
+* Plot the lines on the original image
+    ```python
+    plotted_lane = draw_lines_on_image(image, binary_warped, left_fit, right_fit, Minv)
+    ```
+* Print the curvature radii and distance from the center on the image 
+    ```python
+    left_curverad, right_curverad, dist_from_center = curvature_in_meters(binary_warped, left_fit, right_fit)
+    printed_data_on_image = print_data_on_image(plotted_lane, left_curverad, right_curverad, dist_from_center)
+    ```
+
+* Save the fitted lines for the next frame
+    ```python
+    left_line.previous_fit, right_line.previous_fit = left_fit, right_fit
+    left_line.found, right_line.found = True, True
+    ```
+    
+* return the plotted lane
+
+
 
 
 ### Pipeline on all test images
@@ -166,16 +215,16 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 ---
 
-### Pipeline (video)
+## Pipeline (video)
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-## FInal Result 
+### Final Result 
 ### ( 0:00 - 0:25 sec )
 ![](data/output_videos/gif_solution_1.gif)
 
 ### ( 0:25 - 0:50 sec )
 ![](data/output_videos/gif_solution_2.gif)
+
 
 Here's a [link to my video result](data/output_videos/project_video_solution.mp4)
 
