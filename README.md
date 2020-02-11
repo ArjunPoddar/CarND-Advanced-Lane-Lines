@@ -1,10 +1,14 @@
 # Advanced Lane Finding
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
+
 The goal of this project is, given a video of a road taken from a car moving forward, to identify the lane lines and plot them on the video.
 
 Here is a glimpse of the what we have accomplished in this project -
 
+## Input and Output Samples
+
+&nbsp;
 <p float="left">
     <img src='data/test_videos/gif_challenge_sample.gif' width="360" height="200"/>
     <img src ='data/output_videos/gif_solution_sample.gif' width="360" height="200"/>
@@ -104,21 +108,22 @@ Here is an example of how it works.
 
 <img src="data/pipeline_examples/step3_perspective_transform_warping.jpg" width="800" height="600"/>
 
+
+
 ### 4. Lane Lines Detection and Polynomial Fitting
 I used two methods for lane lines detection and to fit polynomials.
 
 #### a) Sliding Windows Method:
 Given a binary image that has gone through perspective transform and warping, this method (implemented in functions ```find_lane_pixels``` and ```get_polynomial```) divides the image into several horizontal windows and then detects peaks in intensity on the left and right side of frame. To do this, intensity histograms are taken into account. When all the peaks have been detected, ```np.polyfit``` is used to fit a quadratic equation to each side of the image to represent the left and the right lanes. The result of this process looks like this when applied to a test image.
 
-<img src="data/pipeline_examples/step4a_sliding_windows.jpg" width="640" height="400"/>
-
+![sliding_windows](data/pipeline_examples/step4a_sliding_windows.jpg)
 
 #### b) Search From Prior Method:
 I implemented the ```search_around_poly``` function which, gievn an image of a road and equations of lines from the left and the right lanes from the previous frame, tries to detect and fit lane lines in the current frame. It does so by reading the previous lane lines and then looking for lines within their margins. The working principle of this method is that when the camera takes images in a moving car, there is very high chance of finding the next lines around the neighborhood of the previous lines as lane lines do not change abruptly. 
 
 Here is an example:
-<img src="data/pipeline_examples/step4b_search_from_prior.jpg" width="640" height="400"/>
 
+![search_prior](data/pipeline_examples/step4b_search_from_prior.jpg)
 
 ### 5. Measuring Curvature and Distance from the Center
 There were two methods taught in the course to calculate curvature of the lines and I implemented both in my notebook. They are named ```measure_curvature_and_center``` and ```curvature_in_meters``` respectively. I used the second one, ```curvature_in_meters```, to implement in the pipeline. Once the left and right radii of curvature have been determined, I use take average of their intercepts at the bottom of the image to detect the center of the car and then subtract from the middle of the width of the image to get the distance from the center.
@@ -176,53 +181,67 @@ Here is how my pipeline works -
     
 * return the plotted lane
 
+----
 
 
+### Pipeline Applied on All Test Images
+Here I show the results of applying the pipeline on all the test images. The results can also be found [here](data/output_images/).
 
-### Pipeline on all test images
-
-### result: test1    
-<img src="data/output_images/pipeline_result_test1.jpg" width="600" height="400">
-
-&nbsp;
-### result: test2
-<img src="data/output_images/pipeline_result_test2.jpg" width="600" height="400">
+##### Pipeline result on test1.jpg   
+<img src="data/output_images/pipeline_result_test1.jpg" width="500" height="300">
 
 &nbsp;
-### result: test3
-<img src="data/output_images/pipeline_result_test3.jpg" width="600" height="400">
+##### Pipeline result on test2.jpg  
+<img src="data/output_images/pipeline_result_test2.jpg" width="500" height="300">
 
 &nbsp;
-### result: test4
-<img src="data/output_images/pipeline_result_test4.jpg" width="600" height="400">
+##### Pipeline result on test3.jpg  
+<img src="data/output_images/pipeline_result_test3.jpg" width="500" height="300">
 
 &nbsp;
-### result: test5
-<img src="data/output_images/pipeline_result_test5.jpg" width="600" height="400">
+##### Pipeline result on test4.jpg  
+<img src="data/output_images/pipeline_result_test4.jpg" width="500" height="300">
 
 &nbsp;
-### result: test6
-<img src="data/output_images/pipeline_result_test6.jpg" width="600" height="400">
+##### Pipeline result on test5.jpg  
+<img src="data/output_images/pipeline_result_test5.jpg" width="500" height="300">
 
 &nbsp;
-### result: straight_lines1
-<img src="data/output_images/pipeline_result_straight_lines1.jpg" width="600" height="400">
+##### Pipeline result on test6.jpg  
+<img src="data/output_images/pipeline_result_test6.jpg" width="500" height="300">
 
 &nbsp;
-### result: straight_lines2
-<img src="data/output_images/pipeline_result_straight_lines2.jpg" width="600" height="400">
+##### Pipeline result on straight_lines1.jpg
+<img src="data/output_images/pipeline_result_straight_lines1.jpg" width="500" height="300">
 
+&nbsp;
+##### Pipeline result on straight_lines2.jpg
+<img src="data/output_images/pipeline_result_straight_lines2.jpg" width="500" height="300">
 
----
+&nbsp;
+**As we can see, all the lane lines have been detected properly and curvature and distance info has been printed on the images. So far so good!!**
+
+-----
 
 ## Pipeline (video)
 
+After I made sure that the pipeline works for the individual images, I implemented the pipeline on the project_video file to get the final result.
+
+```python
+left_line = Line()
+right_line = Line()
+
+clip1 = VideoFileClip(input_video)
+out_clip1 = clip1.fl_image(pipeline)
+```
 
 ### Final Result 
-### ( 0:00 - 0:25 sec )
+Let us look at the final result. I have divided the output video into two parts and created gifs for each. Please take a look.
+
+### Result ( 0:00 - 0:25 sec )
 ![](data/output_videos/gif_solution_1.gif)
 
-### ( 0:25 - 0:50 sec )
+### Result ( 0:25 - 0:50 sec )
 ![](data/output_videos/gif_solution_2.gif)
 
 
@@ -230,8 +249,9 @@ Here's a [link to my video result](data/output_videos/project_video_solution.mp4
 
 ---
 
-### Discussion
+## Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+Here are few comments and areas where I'd like to do some future work:
+* 1. Improve the method to find thresholds as my selection was quite manual and hence laborious. Any improvement in doing so would aid us in detecting lane lines where the color of the road and lane lines, the sorrounding areas (presence of lane-like obejcts along the side(s) of the road) are diverse.
+* 2. Improve the lane detection and polynomial fitting process: To smooth out flickerings in detected lanes, advanced mathematical methods such as moving averages and weighted smoothing from previous frames could be used.
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further. 
