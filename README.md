@@ -14,7 +14,9 @@ Here is a glimpse of the what we have accomplished in this project -
 
 The work is done in the following jupyter notebook: [advanced_lane_lines.ipynb](advanced_lane_lines.ipynb)
 
+The results of applying the image processing pipeline on the test images are here: [data/output_images/](data/output_images/)
 
+The final result(plotted lanes on the project-video) can be found here: [data/output_videos/challenge_video_solution.mp4](data/output_videos/project_video_solution.mp4)
 
 
 
@@ -32,26 +34,38 @@ The work is done in the following jupyter notebook: [advanced_lane_lines.ipynb](
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
+The camera calibration matrix and the distortion correction coefficients are in the **Camera Calibration** section of the [advanced_lane_lines.ipynb](advanced_lane_lines.ipynb) Jupyter Notebook.
 
-I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
+The goal is this part is to use known images to device a mapping function between distorted and undistorted images that when applied to other distorted images corrects the distortion. Images of chessboards are ideal candidates for this task as layout of chessboards is very mathematically structured and hence the corners on undistorted images are deterministic to some degree.
 
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
+I read the given 20 distorted images of chessboards. Using the ```cv2.findChessboardCorners ``` function I tried to locate the corners of the chessboard and then using the ```cv2.drawChessboardCorners``` function I plotted the corners on the respective images. Corners were found for most of the images and for some of them, I could not find any corners such as for calibration4.jpg, calibration5.jpg etc. For the images where corners were found, the image-points(corners) were stored in an array named ```imgpoint``` which is an 2D array of image points as the given images are in 2D. The known corners of the undistorted chessboards, called the object points, are stored in a 3D array named ```objpoint```. We need 3D array for object points as we are trying to correct for distortion of 3D objects projected into 2D images. As chessboards the flat, the 3rd co-ordinate in ```objpoint``` is always kept at 0.
 
-![alt text][image1]
+After that, I used the ```cv2.calibrateCamera``` function on the image points and the object points to calculate the camera matrix and the distortion coefficients, which are then used to get the undistorted image using the ```cv2.undistort``` function.
+
+```python
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, image_size, None, None)
+dst = cv2.undistort(image, mtx, dist, None, mtx)
+```
+Here is the result of undistorting one chessboard image as test:
+
+![chess_undistort](data/pipeline_examples/undistorted_chessboard.jpg)
+
+I have saved the camera calibration results [here](data/camera_calibration.p) for later uses. 
+
 
 ### Pipeline (single images)
 
-#### 1. Provide an example of a distortion-corrected image.
+#### 1. Distortion Correction
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+Using the camera calibration matrix and distortion coefficients that I had saved in the previous step, I write a function called ```undistort_image``` that, given a distorted image, performs undistortion and returns a corrected image. Here is an example: 
 
-#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+![image_undistort](data/pipeline_examples/step1_undistorted.jpg)
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+#### 2. Thresholding into a Binary Image: Color transforms, Gradients or other methods
 
-![alt text][image3]
+
+
+<img src="data/pipeline_examples/step2_thresholding.jpg" width="800" height="500"/>
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
@@ -145,7 +159,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 ### ( 0:25 - 0:50 sec )
 ![](data/output_videos/gif_solution_2.gif)
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](data/output_videos/project_video_solution.mp4)
 
 ---
 
