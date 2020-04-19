@@ -5,7 +5,6 @@ import pickle
 import glob
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
-from ipywidgets import interact, interactive, fixed
 from moviepy.editor import VideoFileClip
 
 # Declare a line class to help with the transition from one frame to another
@@ -18,12 +17,14 @@ class Line():
         # radii
         self.left_curverad, self.right_curverad, self.dist_from_center = None, None, None
 
+
 # Distortion Correction
 def undistort_image(image, dict):
     mtx = dict["mtx"]
     dist = dict["dist"]
     image = cv2.undistort(image, mtx, dist, None, mtx)
     return image
+
 
 # Sobel Correction using absolute values
 def abs_sobel_thresh(img, orient = 'x', sobel_kernel = 3, thresh = (0, 255)):
@@ -54,6 +55,7 @@ def abs_sobel_thresh(img, orient = 'x', sobel_kernel = 3, thresh = (0, 255)):
     # Return the binary masked image
     return grad_binary
 
+
 # Sobel correction using magnitude of x and y gradients
 def mag_thresh(image, sobel_kernel = 3, thresh = (0, 255)):
     
@@ -77,6 +79,7 @@ def mag_thresh(image, sobel_kernel = 3, thresh = (0, 255)):
    
     # Return the thresholded image
     return mag_binary
+
 
 # Sobel correction using the angle between the x and y gradients
 def dir_thresh(image, sobel_kernel=3, thresh=(0, np.pi/2)):
@@ -105,7 +108,6 @@ def dir_thresh(image, sobel_kernel=3, thresh=(0, np.pi/2)):
 
 # Thresholding using H channel (from HLS)
 def hue_thresh(img, thresh=(0, 255)):
-    
     # Convert to HLS color space
     image_hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     
@@ -117,9 +119,9 @@ def hue_thresh(img, thresh=(0, 255)):
     # Return a binary image of threshold result
     return binary_output  
 
+
 # Thresholding using S channel (from HLS)
 def saturation_thresh(img, thresh=(0, 255)):
-    
     # Convert to HLS color space
     image_hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     
@@ -131,8 +133,9 @@ def saturation_thresh(img, thresh=(0, 255)):
     # Return a binary image of threshold result
     return binary_output  
 
+
 # Combine all the thresholds
-def combined_thresh(img, abs_thresh = (20, 100), magnitude_thresh = (30, 100),                          angle_thresh = (0.7, 1.4), h_thresh = (10, 35), s_thresh = (120, 255)):
+def combined_thresh(img, abs_thresh = (20, 100), magnitude_thresh = (30, 100), angle_thresh = (0.7, 1.4), h_thresh = (10, 35), s_thresh = (120, 255)):
     gradx = abs_sobel_thresh(img, orient = 'x', sobel_kernel = 3, thresh = abs_thresh)
     grady = abs_sobel_thresh(img, orient = 'y', sobel_kernel = 3, thresh = abs_thresh)
     mag_binary = mag_thresh(img, sobel_kernel = 3, thresh = magnitude_thresh)
@@ -142,6 +145,7 @@ def combined_thresh(img, abs_thresh = (20, 100), magnitude_thresh = (30, 100),  
     combined_binary = np.zeros_like(gradx)
     combined_binary[(gradx == 1) & (grady ==1) & (mag_binary == 1) & (dir_binary == 1) | (h_binary == 1) & (s_binary == 1)] = 1
     return combined_binary
+
 
 # Perspective transform and warping
 def perspective_transform(image, source = None, destination = None):
@@ -165,6 +169,7 @@ def perspective_transform(image, source = None, destination = None):
     warped = cv2.warpPerspective(image, M, image_size, flags = cv2.INTER_LINEAR)
     return warped, Minv, M
 
+# Lane Lines Detection: Sliding Window Approach
 def find_lane_pixels(binary_warped):
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
@@ -252,8 +257,6 @@ def find_lane_pixels(binary_warped):
 
     return leftx, lefty, rightx, righty, out_img
 
-
-# Lane Lines Detection: Sliding Window Approach
 def fit_polynomial(binary_warped):
     # Find our lane pixels first
     leftx, lefty, rightx, righty, out_img = find_lane_pixels(binary_warped)
@@ -282,14 +285,6 @@ def fit_polynomial(binary_warped):
     return out_img, left_fit, right_fit
 
 
-# Lane Lines Detection: Search from Prior
-# Load our image - this should be a new frame since last time!
-# binary_warped = mpimg.imread('')
-
-# Polynomial fit values from the previous frame
-# Make sure to grab the actual values from the previous step in your project!
-# _, left_fit, right_fit = fit_polynomial(binary_warped)
-
 def fit_poly(img_shape, leftx, lefty, rightx, righty):
     ### TO-DO: Fit a second order polynomial to each with np.polyfit() ###
     left_fit = np.polyfit(x = lefty, y = leftx, deg = 2)
@@ -302,6 +297,8 @@ def fit_poly(img_shape, leftx, lefty, rightx, righty):
     
     return left_fitx, right_fitx, ploty
 
+
+# Lane Lines Detection: Seach from Prior 
 def search_around_poly(binary_warped, left_fit, right_fit):
     # HYPERPARAMETER
     # Choose the width of the margin around the previous polynomial to search
@@ -361,12 +358,8 @@ def search_around_poly(binary_warped, left_fit, right_fit):
     cv2.fillPoly(window_img, np.int_([right_line_pts]), (0,255, 0))
     result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
     
-#     # Plot the polynomial lines onto the image
-#     plt.plot(left_fitx, ploty, color='yellow')
-#     plt.plot(right_fitx, ploty, color='yellow')
-    ## End visualization steps ##
-    
     return result, left_fit, right_fit
+
 
 # Draw Lanes on Original Image
 def draw_lines_on_image(original_img, binary_img, left_fit, right_fit, Minv):
@@ -391,6 +384,7 @@ def draw_lines_on_image(original_img, binary_img, left_fit, right_fit, Minv):
     
     return result
 
+
 # Measuring curvature and distance from the center
 def measure_curvature_and_center(binary_warped, left_fit, right_fit):
     '''
@@ -398,7 +392,6 @@ def measure_curvature_and_center(binary_warped, left_fit, right_fit):
     '''
     ploty = np.linspace(0, binary_warped.shape[0] - 1, num = binary_warped.shape[0])
     
-  
     quadratic_coeff = 3e-4 # arbitrary quadratic coefficient
     # For each y position generate random x position within +/-50 pix
     # of the line base position in each case (x=200 for left, and x=900 for right)
@@ -409,7 +402,6 @@ def measure_curvature_and_center(binary_warped, left_fit, right_fit):
 
     leftx = leftx[::-1]  # Reverse to match top-to-bottom in y
     rightx = rightx[::-1]  # Reverse to match top-to-bottom in y
-
 
     # Fit a second order polynomial to pixel positions in each fake lane line
     left_fit = np.polyfit(ploty, leftx, 2)
@@ -436,14 +428,16 @@ def measure_curvature_and_center(binary_warped, left_fit, right_fit):
     center = (left_intercept + right_intercept) / 2
     dist_from_center = round((position - center) * xm_per_pix, 2)
     
-    
     return left_curverad, right_curverad, dist_from_center
 
 
+# Calculate Curvature Radius
 def get_curvature_radius(line, y):
     a, b, c = line
     return np.power(1 + np.square(2 * a * y + b), 3 / 2) / np.abs(2 * c)
 
+
+# Calculate left and right curvature
 def curvature_in_meters(binary_image,left_fit,right_fit):
     height, width = binary_image.shape
     # Define conversions in x and y from pixels space to meters
@@ -472,6 +466,7 @@ def curvature_in_meters(binary_image,left_fit,right_fit):
     dist_from_center = round((position - center) * xm_per_pix, 2)
     
     return left_curverad, right_curverad, dist_from_center
+
 
 # Print the curve-radii and the distance on the original image
 def print_data_on_image(image, left_curverad, right_curverad, dist_from_center):
@@ -523,8 +518,8 @@ def pipeline(image):
 
 if __name__ == "__main__":
     images = glob.glob('data/camera_cal/calibration*.jpg')
+
     # Calculate calibration matrix and distortion coefficients from all the chessboard images
-    
     objpoints = []
     imgpoints = []
     objp=np.zeros((6*9,3),np.float32)
@@ -544,9 +539,7 @@ if __name__ == "__main__":
             objpoints.append(objp)
             cv2.drawChessboardCorners(image, (nx, ny), corners, ret)
             ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
-            undist = cv2.undistort(image, mtx, dist, None, mtx)  
-#             plt.imshow(undist)
-
+            undist = cv2.undistort(image, mtx, dist, None, mtx) 
         image = cv2.imread(images[5])
         image_size = (image.shape[1], image.shape[0])
 
@@ -558,7 +551,7 @@ if __name__ == "__main__":
     dist_pickle = {}
     dist_pickle["mtx"] = mtx
     dist_pickle["dist"] = dist
-    pickle.dump(dist_pickle, open("data/camera_calibration.p", "wb" ))
+    # pickle.dump(dist_pickle, open("data/camera_calibration.p", "wb" ))
     input_video = 'data/test_videos/project_video.mp4'
     output_video = 'data/output_videos/project_video_solution_new.mp4'
     
